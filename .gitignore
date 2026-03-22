@@ -1,0 +1,5 @@
+*.egg-info
+/dist/
+/old_dist/
+examples/
+pyproject.toml
