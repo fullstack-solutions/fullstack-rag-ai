@@ -1,10 +1,23 @@
+# query_processor.py
+
 import re
 
 class QueryProcessor:
     """
-    Simple query normalization: lowercase + remove special characters.
+    Normalize queries by:
+    - Converting to lowercase.
+    - Removing special characters.
     """
+
     def process(self, query: str) -> str:
+        """
+        Process a query string.
+
+        Args:
+            query: Original query string.
+
+        Returns:
+            Normalized query string.
+        """
         query = query.lower()
-        query = re.sub(r"[^\w\s]", "", query)
-        return query.strip()
+        return re.sub(r"[^\w\s]", "", query).strip()
