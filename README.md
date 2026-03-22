@@ -1,6 +1,6 @@
 # Fullstack RAG AI
 
-Lightweight **Retrieval-Augmented Generation (RAG)** library for building internal knowledge systems using local documents and LLMs.
+Lightweight Retrieval-Augmented Generation (RAG) library for building internal knowledge systems using local documents and LLMs.
 
 This library allows you to:
 
@@ -14,9 +14,9 @@ This library allows you to:
 
 It is designed to use:
 
-- **Ollama LLMs**
-- **HuggingFace embeddings**
-- **FAISS vector database**
+- Ollama LLMs
+- HuggingFace embeddings
+- FAISS vector database
 
 ---
 
@@ -62,103 +62,101 @@ Typical usage flow:
 ```
 Documents → Chunking → Embeddings → FAISS → Retrieval → LLM → Answer
 ```
-# Loading Documents
+# Loading Documents (Class-Based)
 
-Documents can be loaded either from PDF files or from a list of text strings.
+Documents are loaded using the DocumentLoader class, which can combine multiple sources:
+
+- PDFs from a folder
+- Raw text strings
 
 ## Load From PDFs
 ```Python
-from fullstack_rag_lib.ingestion import load_documents
+from fullstack_rag_lib import DocumentLoader
 
-docs = load_documents(path="documents/")
+# Load all PDFs from a folder
+loader = DocumentLoader(path="./documents")
+docs = loader.load()
+print(f"Loaded {len(docs)} documents from PDFs")
 ```
 ## Load From Text List
 ```Python
-from fullstack_rag_lib.ingestion import load_documents
+from fullstack_rag_lib import DocumentLoader
 
 texts = [
     "Python is a programming language",
     "FAISS is used for vector similarity search"
 ]
 
-docs = load_documents(texts=texts)
+loader = DocumentLoader(texts=texts)
+docs = loader.load()
+print(f"Loaded {len(docs)} documents from text")
 ```
-## Function
+## Load From Both PDFs and Texts
 ```Python
-load_documents(path=None, texts=None)
+loader = DocumentLoader(
+    path="./documents",
+    texts=["Quick guide to FAISS", "Another text document"]
+)
+docs = loader.load()
+print(f"Loaded {len(docs)} documents in total")
 ```
-| Parameter | Type      | Description                 |
-| --------- | --------- | --------------------------- |
-| path      | str       | Folder containing PDF files |
-| texts     | List[str] | List of raw text strings    |
+## Notes:
+- PDFDocumentLoader: Loads PDFs, adds the filename as source metadata for each document.
+- TextDocumentLoader: Converts a list of text strings into LangChain Document objects.
+- DocumentLoader: Combines both sources for a unified list of Document.
 
 
-Returns: List[Document]
+# Vector Database Synchronization
 
-# Updating the Vector Database
+The VectorDBSynchronizer class handles building and updating the FAISS vector database.
 
-This function builds or updates the FAISS vector database.
+- Detects new, updated, or removed files
+- Handles chunking automatically
+- Saves state and cache files (metadata.bin, qa_cache.bin, documents.bin)
 
-It automatically handles:
-- New documents
-- Updated documents
-- Deleted documents
-- Custom chunking strategy (recursive, token, semantic)
-
-Only the necessary parts of the database are rebuilt.
 
 ```Python
-from fullstack_rag_lib.vector_db import sync_vector_db
+from fullstack_rag_lib import VectorDBSynchronizer
 
-sync_vector_db(
+syncer = VectorDBSynchronizer(
     documents_path="./data",
     index_path="./vector_db",
     embedding_model="sentence-transformers/all-MiniLM-L6-v2",
     chunk_size=600,
     chunk_overlap=120,
-    chunk_strategy="semantic",
+    chunking_strategy="semantic"
 )
-```
 
-## Function
+all_docs, metadata, qa_cache, message = syncer.sync()
+print(message)
+```
+Notes:
+
+- documents_path: Folder containing PDFs
+- index_path: Path to store FAISS index and internal files
+- chunking_strategy: "recursive", "token", or "semantic"
+
+Asking Questions:
+
+Use the QAService class for retrieval and LLM-based QA:
 
 ```Python
-sync_vector_db(
-    documents_path=documents_path,
-    index_path=index_path,
-    embedding_model=embedding_model,
-    chunk_size=chunk_size,
-    chunk_overlap=chunk_overlap,
-    chunk_strategy=chunk_strategy
+from fullstack_rag_lib import QAService
+
+qa = QAService(
+    index_path="./vector_db",
+    model="llama3",
+    embedding_model="sentence-transformers/all-MiniLM-L6-v2",
+    k=15,
+    debug=True
 )
+
+answer = qa.ask("What is FAISS used for?")
+print(answer)
 ```
-| Parameter       | Type | Description                                         |
-| --------------- | ---- | --------------------------------------------------- |
-| documents_path  | str  | Directory containing PDF files                      |
-| index_path      | str  | Directory where FAISS index is stored               |
-| embedding_model | str  | HuggingFace embedding model                         |
-| chunk_size      | int  | Size of one chunk                                   |
-| chunk_overlap   | int  | Overlap between chunks                              |
-| chunk_strategy  | str  | Chunking strategy: 'recursive', 'token', 'semantic' |
-
-
-This function maintains the following internal files:
-index.faiss
-index.pkl
-documents.bin
-metadata.bin
-qa_cache.bin
-
-# Asking Questions
-
-Once the vector database exists, you can query it using an LLM.
-The system retrieves the most relevant chunks and sends them to the LLM as context.
-
-You can now also pass a custom prompt template dynamically:
+You can also pass a custom prompt template:
 
 ```Python
-from fullstack_rag_lib.qa import ask_question
-
 custom_prompt = """
 You are a highly technical assistant. Use the context to answer concisely.
 If the answer is not in the context, say 'Not found'.
@@ -168,40 +166,14 @@ Question:
 {question}
 """
 
-answer = ask_question(
-    question="What is FAISS used for?",
+qa = QAService(
     index_path="./vector_db",
     prompt_template=custom_prompt
 )
 
+answer = qa.ask("Explain the onboarding process")
 print(answer)
 ```
-## Function
-
-```Python
-ask_question(
-    question,
-    index_path,
-    model=model,
-    embedding_model=embedding_model,
-    k=k,
-    debug=False,
-    prompt_template=None
-)
-```
-
-| Parameter       | Type | Description                     |
-| --------------- | ---- | ------------------------------- |
-| question        | str  | User question                   |
-| index_path      | str  | Path to vector database         |
-| model           | str  | Ollama LLM model                |
-| embedding_model | str  | HuggingFace embedding model     |
-| k               | int  | Number of chunks retrieved      |
-| debug           | bool | Print retrieved chunks          |
-| prompt_template | str  | Optional custom prompt template |
-
-
-Returns: str
 
 # Deterministic QA Cache
 
@@ -216,62 +188,31 @@ If:
 
 The answer is returned directly from cache.
 
-## Cache File
-
-qa_cache.bin
-
-# Helper Functions
-
-## load_binary
-
-Loads a binary pickle file.
-```Python
-load_binary(path)
-```
-
-Returns empty dictionary if file does not exist.
-
-## save_binary
-
-Stores data as a binary pickle file.
-
-```Python
-save_binary(path, data)
-```
-
-## compute_cache_key
-
-Creates a deterministic key for caching LLM responses.
-
-```Python
-compute_cache_key(question, docs)
-```
-
-Uses:
-- Question text
-- Retrieved document content
+# Deterministic QA Cache
+- Cache keys: question + retrieved context hash
+- If question and context are unchanged, returns cached answer
+- Stored in qa_cache.bin
 
 # Example Full Pipeline
 
 ```Python
-from fullstack_rag_lib.vector_db import sync_vector_db
-from fullstack_rag_lib.qa import ask_question
+from fullstack_rag_lib import VectorDBSynchronizer
+from fullstack_rag_lib import QAService
 
-# Step 1: Build / Update Vector DB
-sync_vector_db(
+# Step 1: Build/update vector DB
+syncer = VectorDBSynchronizer(
     documents_path="./data",
     index_path="./vector_db",
-    chunk_strategy="semantic",
     chunk_size=600,
-    chunk_overlap=120
+    chunk_overlap=120,
+    chunking_strategy="semantic"
 )
+all_docs, metadata, qa_cache, message = syncer.sync()
+print(message)
 
-# Step 2: Ask Questions
-answer = ask_question(
-    question="Summarize the company onboarding process",
-    index_path="./vector_db",
-)
-
+# Step 2: Ask questions
+qa = QAService(index_path="./vector_db", debug=True)
+answer = qa.ask("Summarize the company onboarding process")
 print(answer)
 ```
 
@@ -281,11 +222,12 @@ Any HuggingFace embedding model supported by sentence-transformers can be used.
 
 Example:
 ```Python
-sync_vector_db(
+syncer = VectorDBSynchronizer(
     documents_path="./data",
     index_path="./vector_db",
     embedding_model="sentence-transformers/all-mpnet-base-v2"
 )
+all_docs, metadata, qa_cache, message = syncer.sync()
 ```
 The library will automatically download the model through HuggingFace if it is not already installed.
 
@@ -295,12 +237,14 @@ The LLM model can be changed to any model available in Ollama.
 
 Example:
 ```Python
-answer = ask_question(
-    question="Explain the onboarding process",
+qa = QAService(
     index_path="./vector_db",
     model="llama3:8b",
     embedding_model="sentence-transformers/all-MiniLM-L6-v2"
 )
+
+answer = qa.ask("Explain the onboarding process")
+print(answer)
 ```
 Other examples:
 - model="mistral"
@@ -320,13 +264,10 @@ ollama pull mistral
 
 # Important: Rebuilding the Vector Database
 
-If the embedding model or chunking parameters change, the vector database must be rebuilt removing the older database or creating new database path.
+If chunking parameters or embedding model changes, rebuild the vector DB in a new path or remove the old one.
 
-This is because embeddings from different models are not compatible.
-
-Example workflow:
 ```Python
-sync_vector_db(
+syncer = VectorDBSynchronizer(
     documents_path="./data",
     index_path="./vector_new_db",
     embedding_model="BAAI/bge-base-en",
@@ -334,6 +275,7 @@ sync_vector_db(
     chunk_size=600,
     chunk_overlap=120
 )
+all_docs, metadata, qa_cache, message = syncer.sync()
 ```
 
 # Dependencies
@@ -347,13 +289,13 @@ sync_vector_db(
 - pypdf
 - langchain-experimental
 
-These libraries allow dynamic usage of:
+Supports dynamic usage of:
+
 - Any HuggingFace embedding model
 - Any Ollama LLM model
-
 
 # License
 MIT License
 
 # Author
-Fullstack Solutions
+Fullstack-Solutions
