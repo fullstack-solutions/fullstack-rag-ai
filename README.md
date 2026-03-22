@@ -1,22 +1,30 @@
 # Fullstack RAG AI
 
-Lightweight **Retrieval-Augmented Generation (RAG)** library for building internal knowledge systems using local documents and LLMs.
+Lightweight Retrieval-Augmented Generation (RAG) library for building internal knowledge systems using local documents and LLMs.
 
-This library allows you to:
+Supports:
 
+1. Vector-based retrieval using FAISS and embeddings
+2. Vectorless retrieval using BM25
+
+Optional LLM integration allows reranking, query expansion, and dynamic prompt responses.
+
+# Features
 - Load documents from PDFs or raw text
-- Automatically chunk and embed documents (supports multiple chunking strategies)
-- Store embeddings in a FAISS vector database
-- Ask questions against the knowledge base
-- Use deterministic caching to avoid repeated LLM calls
-- Automatically detect document updates, additions, and deletions
-- Customize prompts dynamically for the LLM
+- Automatic chunking (per-page or whole PDF)
+- Vector-based retrieval with FAISS + embeddings
+- Vectorless retrieval with BM25
+- Optional LLM reranking and query expansion
+- Customizable prompts for LLMs
+- Deterministic caching to avoid repeated LLM calls
+- Automatic detection of document updates, additions, and deletions
+- Fully modular: swap retriever, reranker, or query expander
 
-It is designed to use:
+Supported tools:
 
-- **Ollama LLMs**
-- **HuggingFace embeddings**
-- **FAISS vector database**
+- Ollama LLMs
+- HuggingFace embeddings
+- FAISS vector database
 
 ---
 
@@ -28,8 +36,9 @@ pip install fullstack-rag-ai
 
 # Default Configuration
 
-The library uses a default configuration, but all parameters can be overridden by the user.
+The library has two separate default configurations depending on the retrieval method.
 
+1. Vector-Based (FAISS + Embeddings)
 ```Python
 DEFAULT_CONFIG = {
     "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
@@ -51,264 +60,137 @@ DEFAULT_CONFIG = {
                         """
 }
 ```
+2. Vectorless BM25
+
+```Python
+DEFAULT_CONFIG_BM25 = {
+    "top_k": 5,
+    "max_context_length": 2000,
+    "k1": 1.5,  # BM25 parameter
+    "b": 0.75,  # BM25 parameter
+    "reranker_prompt": """
+You are a ranking system.
+Query:
+{query}
+Documents:
+{documents}
+Return ONLY a list of indices (most relevant first)
+""",
+    "query_expander_prompt": """
+Expand the following query into 3 alternative search queries.
+Query: {query}
+Return as a comma-separated list.
+"""
+}
+```
+- top_k: number of documents retrieved per query
+- max_context_length: max context length for LLM
+- k1 & b: BM25 scoring parameters
 # Core Workflow
 
-Typical usage flow:
-
-- Load documents
-- Build or update vector database
-- Ask questions against the database
-
+## Vector-Based (FAISS + Embeddings)
 ```
 Documents → Chunking → Embeddings → FAISS → Retrieval → LLM → Answer
 ```
-# Loading Documents
-
-Documents can be loaded either from PDF files or from a list of text strings.
-
-## Load From PDFs
-```Python
-from fullstack_rag_lib.ingestion import load_documents
-
-docs = load_documents(path="documents/")
+Vectorless (BM25)
 ```
-## Load From Text List
-```Python
-from fullstack_rag_lib.ingestion import load_documents
-
-texts = [
-    "Python is a programming language",
-    "FAISS is used for vector similarity search"
-]
-
-docs = load_documents(texts=texts)
+Documents → Chunking → BM25 Index → Retrieval → Optional LLM Rerank → Context → LLM Answer
 ```
-## Function
-```Python
-load_documents(path=None, texts=None)
-```
-| Parameter | Type      | Description                 |
-| --------- | --------- | --------------------------- |
-| path      | str       | Folder containing PDF files |
-| texts     | List[str] | List of raw text strings    |
+# Vector-Based FAISS Pipeline
 
 
-Returns: List[Document]
-
-# Updating the Vector Database
-
-This function builds or updates the FAISS vector database.
-
-It automatically handles:
-- New documents
-- Updated documents
-- Deleted documents
-- Custom chunking strategy (recursive, token, semantic)
-
-Only the necessary parts of the database are rebuilt.
+# Vector Database Synchronization
 
 ```Python
-from fullstack_rag_lib.vector_db import sync_vector_db
+from fullstack_rag_lib.vector_rag_ai import VectorDBSynchronizer, QAService
 
-sync_vector_db(
+# Step 1: Build or update vector database
+syncer = VectorDBSynchronizer(
     documents_path="./data",
     index_path="./vector_db",
     embedding_model="sentence-transformers/all-MiniLM-L6-v2",
     chunk_size=600,
     chunk_overlap=120,
-    chunk_strategy="semantic",
+    chunking_strategy="semantic"
 )
-```
+all_docs, metadata, qa_cache, message = syncer.sync()
+print(message)
 
-## Function
+# Step 2: Ask questions
+qa = QAService(index_path="./vector_db", model="llama3", k=15, debug=True)
+answer = qa.ask("What is FAISS used for?")
+print(answer)
+```
+- Supports custom prompt templates:
 
 ```Python
-sync_vector_db(
-    documents_path=documents_path,
-    index_path=index_path,
-    embedding_model=embedding_model,
-    chunk_size=chunk_size,
-    chunk_overlap=chunk_overlap,
-    chunk_strategy=chunk_strategy
-)
-```
-| Parameter       | Type | Description                                         |
-| --------------- | ---- | --------------------------------------------------- |
-| documents_path  | str  | Directory containing PDF files                      |
-| index_path      | str  | Directory where FAISS index is stored               |
-| embedding_model | str  | HuggingFace embedding model                         |
-| chunk_size      | int  | Size of one chunk                                   |
-| chunk_overlap   | int  | Overlap between chunks                              |
-| chunk_strategy  | str  | Chunking strategy: 'recursive', 'token', 'semantic' |
-
-
-This function maintains the following internal files:
-index.faiss
-index.pkl
-documents.bin
-metadata.bin
-qa_cache.bin
-
-# Asking Questions
-
-Once the vector database exists, you can query it using an LLM.
-The system retrieves the most relevant chunks and sends them to the LLM as context.
-
-You can now also pass a custom prompt template dynamically:
-
-```Python
-from fullstack_rag_lib.qa import ask_question
-
 custom_prompt = """
-You are a highly technical assistant. Use the context to answer concisely.
-If the answer is not in the context, say 'Not found'.
+You are a technical assistant. Use the context to answer concisely.
+If answer is not in context, say 'Not found'.
 Context:
 {context}
 Question:
 {question}
 """
+qa = QAService(index_path="./vector_db", prompt_template=custom_prompt)
+```
+# Vectorless BM25 Pipeline
 
-answer = ask_question(
-    question="What is FAISS used for?",
-    index_path="./vector_db",
-    prompt_template=custom_prompt
+```Python
+from fullstack_rag_ai.vectorless_rag_ai import VectorlessRAGPipeline
+from fullstack_rag_ai.vectorless_rag_ai import load_pdfs
+from fullstack_rag_ai.vectorless_rag_ai import VectorlessConfig
+from fullstack_rag_ai.vectorless_rag_ai import LLMReranker
+from fullstack_rag_ai.vectorless_rag_ai import QueryExpander
+
+# Load documents
+documents = load_pdfs("./data", chunk_pages=True)
+
+# Initialize pipeline
+pipeline = VectorlessRAGPipeline(
+    config=VectorlessConfig(top_k=5, max_context_length=2000)
 )
+pipeline.add_documents(documents)
 
-print(answer)
+# Optional LLM reranker
+def my_llm(prompt: str) -> str:
+    return "0,1,2"  # Replace with actual LLM call
+pipeline.set_reranker(LLMReranker(my_llm))
+
+# Optional query expansion
+pipeline.set_query_expander(QueryExpander(my_llm))
+
+# Run query
+result = pipeline.run("tell me about ec2 instance m7a.medium cost")
+print(result["prompt"])
+print([r.chunk.id for r in result["results"]])
 ```
-## Function
-
-```Python
-ask_question(
-    question,
-    index_path,
-    model=model,
-    embedding_model=embedding_model,
-    k=k,
-    debug=False,
-    prompt_template=None
-)
-```
-
-| Parameter       | Type | Description                     |
-| --------------- | ---- | ------------------------------- |
-| question        | str  | User question                   |
-| index_path      | str  | Path to vector database         |
-| model           | str  | Ollama LLM model                |
-| embedding_model | str  | HuggingFace embedding model     |
-| k               | int  | Number of chunks retrieved      |
-| debug           | bool | Print retrieved chunks          |
-| prompt_template | str  | Optional custom prompt template |
-
-
-Returns: str
-
-# Deterministic QA Cache
-
-The library includes a smart cache system that prevents unnecessary LLM calls.
-
-Cache keys are generated using: question + retrieved context hash
-
-If:
-- the question is the same
-
-- the retrieved documents have not changed
-
-The answer is returned directly from cache.
-
-## Cache File
-
-qa_cache.bin
-
-# Helper Functions
-
-## load_binary
-
-Loads a binary pickle file.
-```Python
-load_binary(path)
-```
-
-Returns empty dictionary if file does not exist.
-
-## save_binary
-
-Stores data as a binary pickle file.
-
-```Python
-save_binary(path, data)
-```
-
-## compute_cache_key
-
-Creates a deterministic key for caching LLM responses.
-
-```Python
-compute_cache_key(question, docs)
-```
-
-Uses:
-- Question text
-- Retrieved document content
-
-# Example Full Pipeline
-
-```Python
-from fullstack_rag_lib.vector_db import sync_vector_db
-from fullstack_rag_lib.qa import ask_question
-
-# Step 1: Build / Update Vector DB
-sync_vector_db(
-    documents_path="./data",
-    index_path="./vector_db",
-    chunk_strategy="semantic",
-    chunk_size=600,
-    chunk_overlap=120
-)
-
-# Step 2: Ask Questions
-answer = ask_question(
-    question="Summarize the company onboarding process",
-    index_path="./vector_db",
-)
-
-print(answer)
-```
+- Works without embeddings or FAISS
+- Fully modular: swap retriever, reranker, or query expander dynamically
+- Cache results with pipeline.clear_cache()
 
 # Changing the Embedding Model
 
-Any HuggingFace embedding model supported by sentence-transformers can be used.
+Embeddings:
 
-Example:
 ```Python
-sync_vector_db(
+syncer = VectorDBSynchronizer(
     documents_path="./data",
     index_path="./vector_db",
     embedding_model="sentence-transformers/all-mpnet-base-v2"
 )
+all_docs, metadata, qa_cache, message = syncer.sync()
 ```
-The library will automatically download the model through HuggingFace if it is not already installed.
+LLM: 
 
-# Changing the LLM Model
-
-The LLM model can be changed to any model available in Ollama.
-
-Example:
 ```Python
-answer = ask_question(
-    question="Explain the onboarding process",
+qa = QAService(
     index_path="./vector_db",
     model="llama3:8b",
     embedding_model="sentence-transformers/all-MiniLM-L6-v2"
 )
 ```
-Other examples:
-- model="mistral"
-- model="phi3"
-- model="llama3:70b"
-
-The only requirement is that the model must be available locally in Ollama.
-
+Any Ollama or locally available LLM can be used
 To install a model:
 ```bash
 ollama pull llama3
@@ -318,15 +200,11 @@ ollama pull phi3
 ollama pull mistral
 ```
 
-# Important: Rebuilding the Vector Database
+# Rebuilding Vector Database
+If chunking or embedding model changes, rebuild in a new path:
 
-If the embedding model or chunking parameters change, the vector database must be rebuilt removing the older database or creating new database path.
-
-This is because embeddings from different models are not compatible.
-
-Example workflow:
 ```Python
-sync_vector_db(
+syncer = VectorDBSynchronizer(
     documents_path="./data",
     index_path="./vector_new_db",
     embedding_model="BAAI/bge-base-en",
@@ -334,26 +212,32 @@ sync_vector_db(
     chunk_size=600,
     chunk_overlap=120
 )
+all_docs, metadata, qa_cache, message = syncer.sync()
 ```
+# Deterministic Caching
+Cache keys: question + retrieved context hash
+If question and context are unchanged, cached answer is returned
+Stored in qa_cache.bin
 
 # Dependencies
 
-- langchain
-- langchain-community
-- langchain-huggingface
-- langchain-ollama
-- faiss-cpu
-- sentence-transformers
-- pypdf
-- langchain-experimental
+- Python >= 3.9
+- pypdf (PDF loading)
+- faiss-cpu (vector-based retrieval, optional if using BM25)
+- sentence-transformers (embedding models, optional if using BM25)
+- langchain and related packages for LLM integration:
+    - langchain
+    - langchain-community
+    - langchain-huggingface
+    - langchain-ollama
+    - langchain-experimental (optional)
 
-These libraries allow dynamic usage of:
+Supports dynamic usage of:
 - Any HuggingFace embedding model
 - Any Ollama LLM model
-
 
 # License
 MIT License
 
 # Author
-Fullstack Solutions
+Fullstack-Solutions
