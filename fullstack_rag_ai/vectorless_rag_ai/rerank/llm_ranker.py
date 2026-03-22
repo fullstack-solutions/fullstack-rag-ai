@@ -1,32 +1,25 @@
+# llm_ranker.py
 from typing import List
 from vectorless_rag_ai.types import RetrievalResult
 
-
 class LLMReranker:
+    """
+    LLM-based reranker.
+    Users can plug in OpenAI, local model, etc.
+    """
     def __init__(self, llm_callable):
-        """
-        llm_callable: function(prompt: str) -> str
-        You plug your LLM here (OpenAI, local model, etc.)
-        """
         self.llm = llm_callable
 
     def rerank(self, query: str, results: List[RetrievalResult]) -> List[RetrievalResult]:
         if not results:
             return results
-
         prompt = self._build_prompt(query, results)
         response = self.llm(prompt)
-
         order = self._parse_response(response, len(results))
-
-        reranked = [results[i] for i in order if i < len(results)]
-        return reranked
+        return [results[i] for i in order if i < len(results)]
 
     def _build_prompt(self, query: str, results: List[RetrievalResult]) -> str:
-        chunks_text = "\n\n".join(
-            [f"{i}. {r.chunk.text}" for i, r in enumerate(results)]
-        )
-
+        chunks_text = "\n\n".join([f"{i}. {r.chunk.text}" for i, r in enumerate(results)])
         return f"""
 You are a ranking system.
 
