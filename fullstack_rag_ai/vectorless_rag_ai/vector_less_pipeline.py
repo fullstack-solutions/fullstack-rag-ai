@@ -1,9 +1,9 @@
 from typing import List
-from vectorless_rag_ai.types import DocumentChunk, VectorlessConfig
-from vectorless_rag_ai.indexing.bm25_index import BM25Index
-from vectorless_rag_ai.retrieval.bm25_retriever import BM25Retriever
-from vectorless_rag_ai.query.query_processor import QueryProcessor
-from vectorless_rag_ai.context.context_builder import ContextBuilder
+from .types import DocumentChunk, VectorlessConfig
+from .bm25_index import BM25Index
+from .bm25_retriever import BM25Retriever
+from .query_processor import QueryProcessor
+from .context_builder import ContextBuilder
 
 class VectorlessRAGPipeline:
     """

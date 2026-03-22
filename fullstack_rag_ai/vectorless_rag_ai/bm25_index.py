@@ -2,7 +2,7 @@
 import math
 from collections import defaultdict
 from typing import List
-from vectorless_rag_ai.types import DocumentChunk
+from .types import DocumentChunk
 
 class BM25Index:
     """

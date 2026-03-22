@@ -1,6 +1,6 @@
 # simple_ranker.py
 from typing import List
-from vectorless_rag_ai.types import RetrievalResult
+from .types import RetrievalResult
 
 class SimpleReranker:
     """

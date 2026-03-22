@@ -1,7 +1,7 @@
 # bm25_retriever.py
 from typing import List
-from vectorless_rag_ai.types import RetrievalResult
-from vectorless_rag_ai.indexing.bm25_index import BM25Index
+from .types import RetrievalResult
+from .bm25_index import BM25Index
 
 class BM25Retriever:
     """

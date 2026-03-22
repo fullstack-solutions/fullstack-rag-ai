@@ -1,12 +1,13 @@
-from vectorless_rag_ai.pipeline.vector_less_pipeline import VectorlessRAGPipeline
-from vectorless_rag_ai.types import DocumentChunk, VectorlessConfig, RetrievalResult
-from vectorless_rag_ai.retrieval.bm25_retriever import BM25Retriever
-from vectorless_rag_ai.indexing.bm25_index import BM25Index
-from vectorless_rag_ai.query.query_processor import QueryProcessor
-from vectorless_rag_ai.context.context_builder import ContextBuilder
-from vectorless_rag_ai.rerank.llm_ranker import LLMReranker
-from vectorless_rag_ai.rerank.simple_ranker import SimpleReranker
-from vectorless_rag_ai.query.query_expander import QueryExpander
+from .vector_less_pipeline import VectorlessRAGPipeline
+from .types import DocumentChunk, VectorlessConfig, RetrievalResult
+from .bm25_retriever import BM25Retriever
+from .bm25_index import BM25Index
+from .query_processor import QueryProcessor
+from .context_builder import ContextBuilder
+from .llm_ranker import LLMReranker
+from .simple_ranker import SimpleReranker
+from .query_expander import QueryExpander
+from .document_loader import load_pdfs
 
 __all__ = [
     "VectorlessRAGPipeline",
@@ -20,4 +21,5 @@ __all__ = [
     "LLMReranker",
     "SimpleReranker",
     "QueryExpander",
+    "load_pdfs"
 ]
