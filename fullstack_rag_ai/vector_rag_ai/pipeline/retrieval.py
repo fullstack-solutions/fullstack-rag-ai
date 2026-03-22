@@ -5,8 +5,8 @@ from typing import Any, List, Set, Dict
 from langchain_ollama import ChatOllama
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from .config import DEFAULT_CONFIG
-from .utils import load_binary, save_binary
+from ..config import DEFAULT_CONFIG
+from ..utils.helpers import load_binary, save_binary
 
 # -----------------------------
 # Binary Helpers

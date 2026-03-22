@@ -7,9 +7,9 @@ from langchain.text_splitter import TextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_community.document_loaders import PyPDFLoader
 
-from .config import DEFAULT_CONFIG
-from .utils import get_file_hash, load_binary, save_binary
-from .chunking import get_text_splitter
+from ..config import DEFAULT_CONFIG
+from ..utils.helpers import get_file_hash, load_binary, save_binary
+from ..chunking.text_splitter import get_text_splitter
 
 
 # -------------------

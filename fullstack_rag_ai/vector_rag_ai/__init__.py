@@ -1,3 +1,3 @@
-from .ingestion import load_documents
-from .vectorDB import sync_vector_db
-from .fullstack_rag_pipeline import ask_question
+from .ingestion.document_loader import load_documents
+from .indexing.faiss_indexing import sync_vector_db
+from .pipeline.retrieval import ask_question

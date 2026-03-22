@@ -2,7 +2,7 @@ import os
 from typing import List, Optional
 from langchain.schema import Document
 from langchain_community.document_loaders import PyPDFLoader
-from .loader import load_from_text_list
+from text_loader import load_from_text_list
 
 
 def load_documents(path: Optional[str] = None, texts: Optional[List[str]] = None) -> List[Document]:
