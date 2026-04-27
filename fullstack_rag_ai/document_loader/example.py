@@ -16,7 +16,7 @@ def run_local():
 # -------- GITHUB --------
 def run_github():
     engine = IngestionEngine(
-        source=GitHubSource(token="YOUR_GITHUB_TOKEN")
+        source=GitHubSource(token="GITHUB_TOKEN")
     )
     docs = engine.run()
     print(f"Loaded {len(docs)} documents from repos")
