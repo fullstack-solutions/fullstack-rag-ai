@@ -17,7 +17,7 @@ class UniversalLoader:
         ext = os.path.splitext(file_path)[1].lower()
 
         try:
-            if ext == ".pdf":
+            if ext.lower() == ".pdf":
                 loader = PyPDFLoader(file_path)
 
             elif ext == ".csv":
