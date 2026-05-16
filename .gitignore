@@ -4,3 +4,11 @@
 examples/
 pyproject.toml
 *.pyc
+*venv
+frontend/
+backend*
+example_usage*
+uploads/
+vectordb*
+contracts/
+.vscode

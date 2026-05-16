@@ -46,10 +46,6 @@ class QAService:
     # Retrieval
     # -----------------------------
     def retrieve_documents(self, question: str) -> List[Any]:
-        if not os.path.exists(self.index_path):
-            print(f"[WARN] FAISS index path does not exist: {self.index_path}")
-            return []
-
         try:
             embeddings = HuggingFaceEmbeddings(model_name=self.embedding_model)
             vectordb = FAISS.load_local(
@@ -77,11 +73,11 @@ class QAService:
     # -----------------------------
     def generate_answer(self, prompt: str) -> str:
         try:
-            llm = ChatOllama(model=self.model)
+            llm = ChatOllama(model=self.model, temperature=0.1)
             return llm.invoke(prompt)
         except Exception as e:
-            print(f"[ERROR] LLM failed to generate answer: {e}")
-            return "Failed to generate answer due to LLM error."
+            print(f"[ERROR] LLM failed: {repr(e)}")
+            raise
 
     # -----------------------------
     # Main QA
@@ -108,15 +104,27 @@ class QAService:
         source_files: Set[str] = {d.metadata.get("source") for d in docs}
 
         # Return cached answer if sources unchanged
-        if key in qa_cache:
-            cached_sources = set(qa_cache[key].get("sources", []))
-            if cached_sources == source_files:
-                if self.debug:
-                    print("[INFO] Returning cached answer")
-                return qa_cache[key].get("answer", "Cached answer missing.")
+        # if key in qa_cache:
+        #     cached_sources = set(qa_cache[key].get("sources", []))
+        #     if cached_sources == source_files:
+        #         if self.debug:
+        #             print("[INFO] Returning cached answer")
+        #         cached_answer = qa_cache[key].get("answer", "Cached answer missing.")
+
+        #         if cached_answer and not "Failed to generate answer" in cached_answer:
+        #             return cached_answer
 
         # Build context + prompt
-        context = "\n\n".join(d.page_content for d in docs)
+        context_parts = []
+        for d in docs:
+            source = d.metadata.get("source", "unknown")
+            context_parts.append(f"""
+                                    Source: {source}
+                                    Content:
+                                    {d.page_content}
+                                    """)
+
+        context = "\n".join(context_parts)
         prompt = self.prompt_template.format(context=context, question=question)
 
         # Generate answer
