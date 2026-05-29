@@ -13,3 +13,4 @@ transformers
 accelerate 
 torch 
 bitsandbytes
+boto3
