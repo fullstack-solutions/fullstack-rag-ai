@@ -33,6 +33,7 @@ app.add_middleware(
 )
 
 S3_BUCKET = "vectordb-for-contracts"
+SUFIX = "vectordb_for_contracts"
 LOCAL_DB_PATH = "./vectordb_for_contracts"
 
 UPLOAD_DIR = "./uploads"
@@ -75,7 +76,8 @@ def download_vectordb():
     os.makedirs(LOCAL_DB_PATH, exist_ok=True)
 
     response = s3.list_objects_v2(
-        Bucket=S3_BUCKET
+        Bucket=S3_BUCKET,
+        Prefix=SUFIX
     )
 
     for obj in response.get("Contents", []):
