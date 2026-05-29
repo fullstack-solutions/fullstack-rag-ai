@@ -6,13 +6,8 @@ faiss-cpu
 sentence-transformers
 pypdf
 langchain-experimental
-#neo4j
-#pymupdf
-#pillow 
 transformers 
-#accelerate 
-#torch 
-#bitsandbytes
 boto3
 fastapi
 uvicorn
+langchain_text_splitters

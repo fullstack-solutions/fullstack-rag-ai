@@ -1,6 +1,6 @@
 import os
 
-from langchain.text_splitter import (
+from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
     TokenTextSplitter
 )
