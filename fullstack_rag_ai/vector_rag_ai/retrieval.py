@@ -104,15 +104,15 @@ class QAService:
         source_files: Set[str] = {d.metadata.get("source") for d in docs}
 
         # Return cached answer if sources unchanged
-        # if key in qa_cache:
-        #     cached_sources = set(qa_cache[key].get("sources", []))
-        #     if cached_sources == source_files:
-        #         if self.debug:
-        #             print("[INFO] Returning cached answer")
-        #         cached_answer = qa_cache[key].get("answer", "Cached answer missing.")
+        if key in qa_cache:
+            cached_sources = set(qa_cache[key].get("sources", []))
+            if cached_sources == source_files:
+                if self.debug:
+                    print("[INFO] Returning cached answer")
+                cached_answer = qa_cache[key].get("answer", "Cached answer missing.")
 
-        #         if cached_answer and not "Failed to generate answer" in cached_answer:
-        #             return cached_answer
+                if cached_answer and not "Failed to generate answer" in cached_answer:
+                    return cached_answer
 
         # Build context + prompt
         context_parts = []
