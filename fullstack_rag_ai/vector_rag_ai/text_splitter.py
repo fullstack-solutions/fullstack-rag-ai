@@ -1,8 +1,15 @@
-from typing import Optional
-from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
-from langchain_experimental.text_splitter import SemanticChunker
-from langchain_huggingface import HuggingFaceEmbeddings
+import os
 
+from langchain.text_splitter import (
+    RecursiveCharacterTextSplitter,
+    TokenTextSplitter
+)
+from langchain_experimental.text_splitter import (
+    SemanticChunker
+)
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["OMP_NUM_THREADS"] = "1"
 
 class TextSplitterFactory:
     """
@@ -19,12 +26,12 @@ class TextSplitterFactory:
         strategy: str,
         chunk_size: int,
         chunk_overlap: int,
-        embedding_model: Optional[str] = None,
+        embeddings=None,
     ):
         self.strategy = strategy
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
-        self.embedding_model = embedding_model
+        self.embeddings = embeddings
 
     def get_splitter(self):
         """
@@ -36,39 +43,30 @@ class TextSplitterFactory:
         """
 
         if self.strategy == "recursive":
-            splitter = RecursiveCharacterTextSplitter(
+
+            return RecursiveCharacterTextSplitter(
                 chunk_size=self.chunk_size,
                 chunk_overlap=self.chunk_overlap,
             )
 
         elif self.strategy == "token":
-            splitter = TokenTextSplitter(
+
+            return TokenTextSplitter(
                 chunk_size=self.chunk_size,
                 chunk_overlap=self.chunk_overlap,
             )
 
         elif self.strategy == "semantic":
-            try:
-                if not self.embedding_model:
-                    raise ValueError(
-                        "embedding_model is required for semantic chunking"
-                    )
 
-                embeddings = HuggingFaceEmbeddings(
-                    model_name=self.embedding_model
+            if not self.embeddings:
+                raise ValueError(
+                    "Embeddings required for semantic chunking"
                 )
 
-                splitter = SemanticChunker(embeddings)
-
-            except ImportError:
-                raise ImportError(
-                    "SemanticChunker requires 'langchain-experimental'. "
-                    "Install it to use this option."
-                )
-
-        else:
-            raise ValueError(
-                f"Unsupported chunking strategy: {self.strategy}"
+            return SemanticChunker(
+                self.embeddings
             )
 
-        return splitter
+        raise ValueError(
+            f"Unsupported strategy: {self.strategy}"
+        )

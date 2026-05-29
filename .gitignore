@@ -3,3 +3,11 @@
 /old_dist/
 examples/
 pyproject.toml
+*.pyc
+*venv
+example_usage*
+uploads/
+vectordb*
+contracts/
+.vscode
+tmp_images
