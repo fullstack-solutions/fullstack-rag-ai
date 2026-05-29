@@ -90,14 +90,6 @@ def download_vectordb():
 
 download_vectordb()
 
-qa = QAService(
-    index_path="./vectordb_for_contracts",
-    model="llama3",
-    embedding_model="sentence-transformers/all-MiniLM-L6-v2",
-    k=10,
-    prompt_template=prompt_template
-)
-
 class QuestionRequest(BaseModel):
     question: str
 
@@ -105,7 +97,14 @@ class QuestionRequest(BaseModel):
 def ask_question(req: QuestionRequest):
 
     try:
-
+        print(f"Received question: {req.question}")
+        qa = QAService(
+            index_path="./vectordb_for_contracts",
+            model="llama3",
+            embedding_model="sentence-transformers/all-MiniLM-L6-v2",
+            k=10,
+            prompt_template=prompt_template
+        )
         result = qa.ask(req.question)
         print("QA Result:", result.content)
         return {

@@ -47,6 +47,7 @@ class QAService:
     # -----------------------------
     def retrieve_documents(self, question: str) -> List[Any]:
         try:
+            print("Retrieving documents from FAISS...")
             embeddings = HuggingFaceEmbeddings(model_name=self.embedding_model)
             vectordb = FAISS.load_local(
                 self.index_path,
@@ -73,6 +74,7 @@ class QAService:
     # -----------------------------
     def generate_answer(self, prompt: str) -> str:
         try:
+            print("Generating answer with LLM...")
             llm = ChatOllama(model=self.model, temperature=0.1)
             return llm.invoke(prompt)
         except Exception as e:
