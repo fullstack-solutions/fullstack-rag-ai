@@ -7,3 +7,9 @@ sentence-transformers
 pypdf
 langchain-experimental
 neo4j
+pymupdf
+pillow 
+transformers 
+accelerate 
+torch 
+bitsandbytes
