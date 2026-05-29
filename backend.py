@@ -1,14 +1,7 @@
 import os
-import shutil
-import uuid
-
-from typing import List
 
 from fastapi import (
     FastAPI,
-    UploadFile,
-    File,
-    Form
 )
 import boto3
 import os
@@ -18,8 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from fullstack_rag_ai.vector_rag_ai import (
-    QAService,
-    VectorDBSynchronizer
+    QAService
 )
 
 app = FastAPI()
@@ -105,14 +97,6 @@ qa = QAService(
     prompt_template=prompt_template
 )
 
-syncer = VectorDBSynchronizer(
-    index_path="./vectordb_for_contracts",
-    embedding_model="sentence-transformers/all-MiniLM-L6-v2",
-    chunk_size=100,
-    chunk_overlap=10,
-    chunking_strategy="semantic"
-)
-
 class QuestionRequest(BaseModel):
     question: str
 
@@ -126,68 +110,6 @@ def ask_question(req: QuestionRequest):
         return {
             "success": True,
             "answer": result.content
-        }
-
-    except Exception as e:
-
-        return {
-            "success": False,
-            "error": str(e)
-        }
-
-@app.post("/upload")
-async def upload_documents(
-    files: List[UploadFile] = File(...),
-    data_source_ref: str = Form(...)
-):
-
-    try:
-
-        if not data_source_ref:
-
-            raise ValueError(
-                "data_source_ref is required"
-            )
-
-        uploaded_paths = []
-
-        for file in files:
-
-            unique_name = (
-                f"{uuid.uuid4()}_{file.filename}"
-            )
-
-            save_path = os.path.join(
-                UPLOAD_DIR,
-                unique_name
-            )
-
-            with open(save_path, "wb") as buffer:
-
-                shutil.copyfileobj(
-                    file.file,
-                    buffer
-                )
-
-            uploaded_paths.append(save_path)
-
-        (
-            all_docs,
-            metadata,
-            qa_cache,
-            file_metadata,
-            message
-        ) = syncer.sync(
-            manual_file_mode=True,
-            uploaded_files=uploaded_paths,
-            data_source_ref=data_source_ref
-        )
-
-        return {
-            "success": True,
-            "message": message,
-            "uploaded_files": uploaded_paths,
-            "total_uploaded": len(uploaded_paths)
         }
 
     except Exception as e:
