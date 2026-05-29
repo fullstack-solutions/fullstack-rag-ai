@@ -14,3 +14,5 @@ accelerate
 torch 
 bitsandbytes
 boto3
+fastapi
+uvicorn
