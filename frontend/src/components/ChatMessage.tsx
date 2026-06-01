@@ -5,8 +5,54 @@ interface Props {
     message: Message;
 }
 
+function LoadingDots() {
+    return (
+        <span>
+            Thinking
+            <span className="dot">.</span>
+            <span className="dot">.</span>
+            <span className="dot">.</span>
+
+            <style>
+                {`
+          .dot {
+            animation: blink 1.4s infinite both;
+          }
+
+          .dot:nth-child(2) {
+            animation-delay: 0.2s;
+          }
+
+          .dot:nth-child(3) {
+            animation-delay: 0.4s;
+          }
+
+          @keyframes blink {
+            0% { opacity: 0.2; }
+            20% { opacity: 1; }
+            100% { opacity: 0.2; }
+          }
+        `}
+            </style>
+        </span>
+    );
+}
+
 export default function ChatMessage({ message }: Props) {
     const isUser = message.role === "user";
+
+    const renderContent = () => {
+        if (message.loading) {
+            // if backend is already updating text → show it
+            if (message.content && message.content.length > 0) {
+                return message.content;
+            }
+
+            return <LoadingDots />;
+        }
+
+        return message.content;
+    };
 
     return (
         <Box
@@ -33,7 +79,7 @@ export default function ChatMessage({ message }: Props) {
                         lineHeight: 1.7,
                     }}
                 >
-                    {message.loading ? "Thinking..." : message.content}
+                    {renderContent()}
                 </Typography>
             </Paper>
         </Box>
